@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from transformers import pipeline
 from tqdm import tqdm
-
+import torch
 
 # Configuration
 INPUT_FILE = Path("data/raw/real_reviews.csv")
@@ -20,19 +20,28 @@ MAX_RETRIES_PER_REVIEW = 3
 
 MODEL_NAME = "google/gemma-2-2b-it"
 
+
+LOCAL_MODEL_PATH = r"../models/gemma-2-2b-it"
+
 generator = pipeline(
     "text-generation",
-    model=MODEL_NAME,
-    device_map="auto"
+    model=LOCAL_MODEL_PATH,
+    tokenizer=LOCAL_MODEL_PATH,
+    device_map="auto",
+    model_kwargs={"torch_dtype": torch.bfloat16}
 )
 
+generator.model.generation_config.max_length = None
+generator.model.generation_config.max_new_tokens = 110
+
 PROMPT_TEMPLATE = (
-    "Write one realistic English customer review for an e-commerce product.\n"
+    "Write a short and natural customer review in English for an online product.\n"
+    "Make it sound like a real person wrote it quickly.\n"
+    "Do not make it overly polished or too formal.\n"
     "Return only the review text.\n"
     "Do not include titles, labels, notes, explanations, markdown, placeholders, quotation marks, or bullet points.\n"
     "Do not write words such as Review, Final review, Critique, Product Name, Brand Name, Reference, Overall, or Rating.\n"
-    "The review must be natural, specific, complete, and written in fluent English.\n"
-    "It must contain 3 to 5 sentences, include at least one positive aspect and one mild negative aspect, "
+    "It must contain 2 to 4 sentences, include at least one positive aspect and one mild negative aspect, "
     "and sound like something a real customer would post online.\n"
     "Do not copy the reference text.\n"
     "Output only the review itself.\n\n"
@@ -90,7 +99,7 @@ def clean_generated_text(text: str) -> str:
         "Final review:",
         "Revised review:",
         "Here is the review:",
-        "Here’s the review:",
+        "Here's the review:",
         "This is a review.",
         "Customer review:",
         "Review text:",
@@ -320,3 +329,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
